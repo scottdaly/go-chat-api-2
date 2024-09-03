@@ -14,7 +14,7 @@ var DB *gorm.DB
 
 func InitDatabase() {
 	dbPath := filepath.Join("/app/data", "chat_app.db")
-	
+
 	// Ensure the directory exists
 	err := os.MkdirAll(filepath.Dir(dbPath), os.ModePerm)
 	if err != nil {
@@ -27,7 +27,7 @@ func InitDatabase() {
 	}
 
 	// Migrate the schema
-	DB.AutoMigrate(&models.Persona{}, &models.ChatMessage{})
+	DB.AutoMigrate(&models.Persona{}, &models.Conversation{}, &models.Message{})
 
 	// Seed some initial data only if the table is empty
 	var count int64
