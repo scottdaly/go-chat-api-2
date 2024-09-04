@@ -54,6 +54,8 @@ func main() {
 	// Auth routes
 	app.Get("/login", handlers.HandleGoogleLogin(googleOauthConfig))
 	app.Get("/auth/google/callback", handlers.HandleGoogleCallback(googleOauthConfig, store))
+	app.Get("/auth/status", handlers.HandleAuthStatus(store))
+	app.Post("/logout", handlers.HandleLogout(store))
 
 	// Protected routes
 	app.Use(handlers.AuthMiddleware(store))

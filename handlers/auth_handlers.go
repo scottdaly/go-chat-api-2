@@ -70,3 +70,44 @@ func AuthMiddleware(store *session.Store) fiber.Handler {
 		return c.Next()
 	}
 }
+
+func HandleAuthStatus(store *session.Store) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		sess, err := store.Get(c)
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"isLoggedIn": false,
+				"user":       nil,
+			})
+		}
+
+		user := sess.Get("user")
+		if user == nil {
+			return c.Status(fiber.StatusOK).JSON(fiber.Map{
+				"isLoggedIn": false,
+				"user":       nil,
+			})
+		}
+
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"isLoggedIn": true,
+			"user":       user,
+		})
+	}
+}
+
+func HandleLogout(store *session.Store) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		sess, err := store.Get(c)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to get session"})
+		}
+
+		sess.Delete("user")
+		if err := sess.Save(); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to save session"})
+		}
+
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Logged out successfully"})
+	}
+}
