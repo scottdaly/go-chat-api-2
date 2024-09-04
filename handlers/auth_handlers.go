@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/gob"
 	"encoding/json"
 	"io"
 	"log"
@@ -9,6 +10,11 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/session"
 	"golang.org/x/oauth2"
 )
+
+func init() {
+	// Register the map[string]interface{} type with gob
+	gob.Register(map[string]interface{}{})
+}
 
 func HandleGoogleLogin(config *oauth2.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
