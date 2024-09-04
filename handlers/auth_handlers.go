@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"io"
+	"log"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/session"
@@ -17,37 +18,49 @@ func HandleGoogleLogin(config *oauth2.Config) fiber.Handler {
 }
 
 func HandleGoogleCallback(config *oauth2.Config, store *session.Store) fiber.Handler {
+	log.Println("Entering GoogleCallbackHandler")
 	return func(c *fiber.Ctx) error {
 		code := c.Query("code")
+		if code == "" {
+			log.Println("Code is empty")
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Code is empty"})
+		}
 		token, err := config.Exchange(c.Context(), code)
 		if err != nil {
+			log.Println("Failed to exchange token", err)
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Failed to exchange token"})
 		}
 
 		client := config.Client(c.Context(), token)
 		resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
+
 		if err != nil {
+			log.Println("Failed to get user info", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to get user info"})
 		}
 		defer resp.Body.Close()
 
 		userInfo, err := io.ReadAll(resp.Body)
 		if err != nil {
+			log.Println("Failed to read user info", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to read user info"})
 		}
 
 		var userInfoMap map[string]interface{}
 		if err := json.Unmarshal(userInfo, &userInfoMap); err != nil {
+			log.Println("Failed to parse user info", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to parse user info"})
 		}
 
 		sess, err := store.Get(c)
 		if err != nil {
+			log.Println("Failed to get session", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to get session"})
 		}
 
 		sess.Set("user", userInfoMap)
 		if err := sess.Save(); err != nil {
+			log.Println("Failed to save session", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to save session"})
 		}
 
@@ -59,11 +72,13 @@ func AuthMiddleware(store *session.Store) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		sess, err := store.Get(c)
 		if err != nil {
+			log.Println("Failed to get session", err)
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 		}
 
 		user := sess.Get("user")
 		if user == nil {
+			log.Println("User not found in session")
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 		}
 
