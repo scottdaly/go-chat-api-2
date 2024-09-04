@@ -2,12 +2,33 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/session"
 	"github.com/rscottdaly/go-chat-api-2/database"
 	"github.com/rscottdaly/go-chat-api-2/handlers"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 )
+
+var (
+	googleOauthConfig *oauth2.Config
+	store             *session.Store
+)
+
+func init() {
+	googleOauthConfig = &oauth2.Config{
+		RedirectURL:  "http://localhost:8080/auth/google/callback",
+		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email"},
+		Endpoint:     google.Endpoint,
+	}
+
+	store = session.New()
+}
 
 func main() {
 	// Initialize database
@@ -30,6 +51,12 @@ func main() {
 		return c.SendString("Welcome to the AI Chatting API!")
 	})
 
+	// Auth routes
+	app.Get("/login", handlers.HandleGoogleLogin(googleOauthConfig))
+	app.Get("/auth/google/callback", handlers.HandleGoogleCallback(googleOauthConfig, store))
+
+	// Protected routes
+	app.Use(handlers.AuthMiddleware(store))
 	app.Post("/chat", handlers.ChatHandler)
 	app.Get("/personas", handlers.ListPersonasHandler)
 	app.Post("/personas", handlers.CreatePersonaHandler)
