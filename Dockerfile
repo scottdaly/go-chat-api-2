@@ -4,11 +4,16 @@ FROM golang:1.23
 # Set the working directory inside the container
 WORKDIR /app
 
-# Copy the local package files to the container's workspace
-COPY . .
+# Copy go.mod and go.sum files
+COPY go.mod go.sum ./
 
-# Download all dependencies
+RUN GOPROXY=https://goproxy.cn go get github.com/klauspost/compress
+
+# Download dependencies
 RUN go mod download
+
+# Now copy the rest of the source code
+COPY . .
 
 # Build the application
 RUN go build -o main .
