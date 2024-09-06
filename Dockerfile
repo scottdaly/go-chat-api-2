@@ -8,7 +8,7 @@ WORKDIR /app
 COPY . .
 
 # Download all dependencies
-RUN go mod download
+RUN sudo go mod download
 
 # Build the application
 RUN sudo go build -o main .
