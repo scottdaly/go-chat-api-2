@@ -8,10 +8,10 @@ WORKDIR /app
 COPY . .
 
 # Download all dependencies
-RUN sudo go mod download
+RUN go mod tidy
 
 # Build the application
-RUN sudo go build -o main .
+RUN go build -o main .
 
 # Create a volume for the SQLite database
 VOLUME /app/data
