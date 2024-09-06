@@ -5,10 +5,14 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/session"
+	"github.com/rscottdaly/go-chat-api-2/database"
+	"github.com/rscottdaly/go-chat-api-2/models"
 	"golang.org/x/oauth2"
+	"gorm.io/gorm"
 )
 
 func init() {
@@ -58,13 +62,33 @@ func HandleGoogleCallback(config *oauth2.Config, store *session.Store) fiber.Han
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to parse user info"})
 		}
 
+		// Check if user exists, if not create a new user
+		var user models.User
+		email := userInfoMap["email"].(string)
+		if err := database.DB.Where("email = ?", email).First(&user).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				user = models.User{
+					Username:  userInfoMap["name"].(string),
+					Email:     email,
+					CreatedAt: time.Now(),
+				}
+				if err := database.DB.Create(&user).Error; err != nil {
+					log.Println("Failed to create user", err)
+					return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create user"})
+				}
+			} else {
+				log.Println("Failed to query user", err)
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to query user"})
+			}
+		}
+
 		sess, err := store.Get(c)
 		if err != nil {
 			log.Println("Failed to get session", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to get session"})
 		}
 
-		sess.Set("user", userInfoMap)
+		sess.Set("user", user)
 		if err := sess.Save(); err != nil {
 			log.Println("Failed to save session", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to save session"})

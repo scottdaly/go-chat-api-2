@@ -27,7 +27,7 @@ func InitDatabase() {
 	}
 
 	// Migrate the schema
-	DB.AutoMigrate(&models.Persona{}, &models.Conversation{}, &models.Message{})
+	DB.AutoMigrate(&models.User{}, &models.Persona{}, &models.Conversation{}, &models.Message{})
 
 	// Seed some initial data only if the table is empty
 	var count int64
